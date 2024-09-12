@@ -99,6 +99,8 @@ const getSingleUser = async (req, res, next) => {
     if (!user) {
       throw customError(404, "User not found");
     }
+
+    res.status(200).send({ message: "User info retrieved", data: user });
   } catch (error) {
     next(error);
   }

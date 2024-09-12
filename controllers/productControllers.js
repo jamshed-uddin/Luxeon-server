@@ -87,10 +87,10 @@ const getSingleProduct = async (req, res, next) => {
 //access admin only
 const createProduct = async (req, res, next) => {
   try {
+    console.log(req.body);
+    console.log(req?.cookies?.jwt);
     const productInfo = req.body;
-    const createdProduct = await Products.create({
-      productInfo,
-    });
+    const createdProduct = await Products.create(productInfo);
     res.status(201).send({
       message: "Product created successfully",
       data: { productId: createdProduct._id },
