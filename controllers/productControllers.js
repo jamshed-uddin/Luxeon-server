@@ -11,6 +11,7 @@ const getAllProducts = async (req, res, next) => {
     const page = +query.page || 1;
     const limit = +query.limit || 15;
     const category = query.category || "";
+    const inStock = query.inStock || false;
 
     let filter = {};
 
@@ -20,6 +21,10 @@ const getAllProducts = async (req, res, next) => {
 
     if (searchQuery) {
       filter.title = { $regex: new RegExp(searchQuery, "i") };
+    }
+
+    if (inStock) {
+      filter.inStock = { $gte: 0 };
     }
 
     if (query.minPrice) {
@@ -44,7 +49,6 @@ const getAllProducts = async (req, res, next) => {
     const totalPages = Math.ceil(totalProducts / limit);
     const hasMore = limit > allProducts.length;
     const response = {
-      message: "Products retrieved",
       data: allProducts,
       pagination: {
         page,
@@ -73,10 +77,7 @@ const getSingleProduct = async (req, res, next) => {
       throw customError(404, "Product not found");
     }
 
-    res.status(200).send({
-      message: "Product data retrieved",
-      data: product,
-    });
+    res.status(200).send(product);
   } catch (error) {
     next(error);
   }
@@ -91,10 +92,7 @@ const createProduct = async (req, res, next) => {
     console.log(req?.cookies?.jwt);
     const productInfo = req.body;
     const createdProduct = await Products.create(productInfo);
-    res.status(201).send({
-      message: "Product created successfully",
-      data: { productId: createdProduct._id },
-    });
+    res.status(201).send({ productId: createdProduct._id });
   } catch (error) {
     next(error);
   }
@@ -120,10 +118,7 @@ const updateProduct = async (req, res, next) => {
       { new: true }
     );
 
-    res.status(200).send({
-      message: "Product data updated",
-      data: { productId: updatedProduct._id },
-    });
+    res.status(200).send({ productId: updatedProduct._id });
   } catch (error) {
     next(error);
   }

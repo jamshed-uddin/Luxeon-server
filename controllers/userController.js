@@ -7,14 +7,22 @@ const generateToken = require("../utils/generateToken");
 //access public
 const loginUser = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { email, password } = req.body;
+
     if (!email) {
       throw customError(401, "Email required");
     }
 
     const user = await Users.findOne({ email });
-    generateToken(res, user._id);
-    res.status(200).send({ message: "Login successful" });
+
+    if (user && (await user.matchPassword(password))) {
+      const { password: passcode, ...userData } = user._doc;
+      res.status(200).send(userData);
+    } else {
+      throw customError(400, "Invalid credentails");
+    }
+
+    // generateToken(res, user._id);
   } catch (error) {
     next(error);
   }
@@ -25,7 +33,7 @@ const loginUser = async (req, res, next) => {
 //access public
 const registerUser = async (req, res, next) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, password } = req.body;
 
     if (!name || !email) {
       throw customError(401, "Fill up the required field");
@@ -34,12 +42,13 @@ const registerUser = async (req, res, next) => {
     const user = await Users.findOne({ email });
 
     if (user) {
-      generateToken(res, user._id);
+      // generateToken(res, user._id);
       throw customError(309, "This email already in use");
     }
-    const createdUser = await Users.create({ name, email });
-    generateToken(res, createdUser._id);
-    res.status(201).send(createdUser);
+    const createdUser = await Users.create({ name, email, password });
+    const { password: passcode, ...userData } = createdUser;
+    // generateToken(res, createdUser._id);
+    res.status(201).send(userData);
   } catch (error) {
     next(error);
   }
@@ -71,7 +80,6 @@ const getAllUsers = async (req, res, next) => {
     const hasMore = limit > allUsers.length;
 
     const response = {
-      message: "All users retrieved",
       data: allProducts,
       pagination: {
         page,
@@ -100,7 +108,7 @@ const getSingleUser = async (req, res, next) => {
       throw customError(404, "User not found");
     }
 
-    res.status(200).send({ message: "User info retrieved", data: user });
+    res.status(200).send(user);
   } catch (error) {
     next(error);
   }
@@ -131,7 +139,7 @@ const updateUser = async (req, res, next) => {
 };
 
 //@desc logout user(clearing the cookie)
-//route GET/api/users/:id
+//route POST/api/users/logout
 //access public (user himself only)
 const logoutUser = async (req, res, next) => {
   try {
