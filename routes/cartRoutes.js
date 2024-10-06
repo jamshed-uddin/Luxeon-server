@@ -1,14 +1,14 @@
 const express = require("express");
 const {
-  getCart,
   addToCart,
   updateCartItem,
+  getUserCart,
 } = require("../controllers/cartControllers");
 const { verifyAuth } = require("../middlewares/verifyMids");
 const router = express.Router();
 
-router.get("/", verifyAuth, getCart);
-router.post("/", verifyAuth, addToCart);
+router.get("/", getUserCart);
+router.post("/", addToCart);
 router.patch("/:id", updateCartItem);
 
 module.exports = router;
