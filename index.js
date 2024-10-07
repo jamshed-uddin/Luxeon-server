@@ -34,8 +34,8 @@ app.use("/api/users", userRouter);
 app.use("/api/products", productRouter);
 app.use("/api/cart", cartRouter);
 
-app.use(notFound);
 app.use(errorHandler);
+app.use(notFound);
 
 app.listen(port, () => {
   console.log("Server is running on " + port);

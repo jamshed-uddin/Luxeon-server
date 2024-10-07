@@ -4,10 +4,10 @@ const {
   updateCartItem,
   getUserCart,
 } = require("../controllers/cartControllers");
-const { verifyAuth } = require("../middlewares/verifyMids");
+
 const router = express.Router();
 
-router.get("/", getUserCart);
+router.get("/:id", getUserCart);
 router.post("/", addToCart);
 router.patch("/:id", updateCartItem);
 
