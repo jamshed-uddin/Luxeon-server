@@ -7,7 +7,7 @@ const {
 
 const router = express.Router();
 
-router.get("/:id", getUserCart);
+router.get("/", getUserCart);
 router.post("/", addToCart);
 router.patch("/:id", updateCartItem);
 

@@ -11,7 +11,7 @@ const getAllProducts = async (req, res, next) => {
     const page = +query.page || 1;
     const limit = +query.limit || 15;
     const category = query.category || "";
-    const inStock = query.inStock || false;
+    const stock = query.stock || false;
 
     let filter = {};
 
@@ -23,8 +23,8 @@ const getAllProducts = async (req, res, next) => {
       filter.title = { $regex: new RegExp(searchQuery, "i") };
     }
 
-    if (inStock) {
-      filter.inStock = { $gte: 0 };
+    if (stock) {
+      filter.stock = { $gte: 0 };
     }
 
     if (query.minPrice) {
@@ -36,8 +36,11 @@ const getAllProducts = async (req, res, next) => {
 
     let sortBy = { createdAt: -1 };
     if (query?.sort) {
-      sortBy[query?.sort] = -1;
+      sortBy[query?.sort] =
+        query?.order && query?.order.toLowerCase() === "desc" ? -1 : 1;
     }
+
+    // console.log(sortBy);
 
     const allProducts = await Products.find(filter)
       .skip((page - 1) * limit)
@@ -47,7 +50,7 @@ const getAllProducts = async (req, res, next) => {
     const products = await Products.find(filter).exec();
     const totalProducts = products?.length;
     const totalPages = Math.ceil(totalProducts / limit);
-    const hasMore = limit > allProducts.length;
+    const hasMore = limit > allProducts?.length;
     const response = {
       data: allProducts,
       pagination: {
@@ -88,8 +91,6 @@ const getSingleProduct = async (req, res, next) => {
 //access admin only
 const createProduct = async (req, res, next) => {
   try {
-    console.log(req.body);
-    console.log(req?.cookies?.jwt);
     const productInfo = req.body;
     const createdProduct = await Products.create(productInfo);
     res.status(201).send({ productId: createdProduct._id });

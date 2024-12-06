@@ -1,5 +1,6 @@
 const Users = require("../models/userModel");
 const customError = require("../utils/customError");
+const generateAuthToken = require("../utils/generateAuthToken");
 const generateToken = require("../utils/generateToken");
 
 //@desc register user
@@ -161,6 +162,25 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+//@desc generate auth token
+//route POST/api/users/generateAuthToken
+//access public
+const generateJwtToken = async (req, res, next) => {
+  const { email, name } = req.body;
+
+  try {
+    if (!email || !name) {
+      throw customError(404, "Payload missing");
+    }
+
+    const authToken = generateAuthToken({ email, name });
+
+    res.status(200).send({ authToken });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   loginUser,
   getAllUsers,
@@ -169,4 +189,5 @@ module.exports = {
   updateUser,
   deleteUser,
   logoutUser,
+  generateJwtToken,
 };
