@@ -1,7 +1,10 @@
 const Users = require("../models/userModel");
+const passwordResetTemplate = require("../templates/passwordResetTemplate");
 const customError = require("../utils/customError");
 const generateAuthToken = require("../utils/generateAuthToken");
 const generateToken = require("../utils/generateToken");
+const sendEmail = require("../utils/sendEmail");
+const crypto = require("crypto");
 
 //@desc register user
 //route POST/api/users/login
@@ -181,6 +184,87 @@ const generateJwtToken = async (req, res, next) => {
   }
 };
 
+//@desc request for password reset email
+//route POST/api/users/resetPasswordEmailReqest
+//access public
+const resetPasswordEmailReqest = async (req, res, next) => {
+  const { email } = req.body;
+  try {
+    const user = await Users.findOne({ email });
+    if (!user) {
+      throw customError(
+        400,
+        "Failed to send instructions. Wait before trying again."
+      );
+    }
+
+    const resetToken = await user.generatePasswordResetToken();
+
+    const resetLink = `${req.protocol}://${req.get(
+      "host"
+    )}/reset-password?reset=${resetToken}`;
+    console.log(resetLink);
+
+    const emailOptions = {
+      to: [user?.email],
+      subject: "Password reset",
+      html: passwordResetTemplate(resetLink),
+    };
+
+    try {
+      const res = await sendEmail(emailOptions);
+      console.log("mail response", res);
+    } catch (error) {
+      console.log("mailerror", error);
+      throw customError(
+        400,
+        "Failed to send instructions. Wait before trying again."
+      );
+    }
+    res.status(200).send({ message: "Email sent" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//@desc resetPassword
+//route PUT/api/users/resetPassword
+//access public
+const resetPassword = async (req, res, next) => {
+  const { passwordResetToken, newPassword } = req.body;
+
+  if (!passwordResetToken) {
+    throw customError(401, "Failed to reset password");
+  } else if (!newPassword) {
+    throw customError(401, "New password is required");
+  }
+
+  const resetToken = crypto
+    .createHash("sha256")
+    .update(passwordResetToken)
+    .digest("hex");
+
+  try {
+    const user = await Users.findOne({
+      passwordResetToken: resetToken,
+      passwordResetTokenExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      throw customError(401, "Failed to reset password");
+    }
+
+    user.password = newPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetTokenExpires = undefined;
+
+    await user.save();
+    res.status(200).send({ message: "Password reset successful" });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   loginUser,
   getAllUsers,
@@ -190,4 +274,6 @@ module.exports = {
   deleteUser,
   logoutUser,
   generateJwtToken,
+  resetPasswordEmailReqest,
+  resetPassword,
 };
