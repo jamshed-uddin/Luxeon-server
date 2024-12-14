@@ -1,4 +1,5 @@
 const Products = require("../models/productModel");
+const { uploadToCloud } = require("../utils/cloudinaryOps");
 const customError = require("../utils/customError");
 
 //@desc get all products with filters and pagination
@@ -148,10 +149,43 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
+//@desc upload image for product
+//route POST/api/products/uploadImage
+//access private
+const uploadImage = async (req, res, next) => {
+  try {
+    const files = req.files;
+    console.log(files);
+    if (!files.length || !files) {
+      throw customError(400, "File is missing");
+    }
+
+    const uploadPromisses = files?.map((file) => uploadToCloud(file));
+
+    const uploadResult = await Promise.all(uploadPromisses);
+
+    console.log(uploadResult);
+    // console.log(req);
+
+    res.status(200).send({ message: "success", result: uploadResult });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteImage = async (req, res, next) => {
+  try {
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllProducts,
   getSingleProduct,
   createProduct,
   updateProduct,
   deleteProduct,
+  uploadImage,
+  deleteImage,
 };

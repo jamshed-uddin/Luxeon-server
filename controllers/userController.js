@@ -2,7 +2,6 @@ const Users = require("../models/userModel");
 const passwordResetTemplate = require("../templates/passwordResetTemplate");
 const customError = require("../utils/customError");
 const generateAuthToken = require("../utils/generateAuthToken");
-const generateToken = require("../utils/generateToken");
 const sendEmail = require("../utils/sendEmail");
 const crypto = require("crypto");
 
@@ -17,7 +16,7 @@ const loginUser = async (req, res, next) => {
       throw customError(401, "Email required");
     }
 
-    const user = await Users.findOne({ email });
+    const user = await Users.findOne({ email, provider: "credentails" });
 
     if (user && (await user.matchPassword(password))) {
       const { password: passcode, ...userData } = user._doc;
@@ -37,7 +36,7 @@ const loginUser = async (req, res, next) => {
 //access public
 const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, provider } = req.body;
 
     if (!name || !email) {
       throw customError(401, "Fill up the required field");
@@ -49,7 +48,7 @@ const registerUser = async (req, res, next) => {
       // generateToken(res, user._id);
       throw customError(309, "This email already in use");
     }
-    const createdUser = await Users.create({ name, email, password });
+    const createdUser = await Users.create({ name, email, password, provider });
     const { password: passcode, ...userData } = createdUser;
     // generateToken(res, createdUser._id);
     res.status(201).send(userData);
@@ -190,7 +189,7 @@ const generateJwtToken = async (req, res, next) => {
 const resetPasswordEmailReqest = async (req, res, next) => {
   const { email } = req.body;
   try {
-    const user = await Users.findOne({ email });
+    const user = await Users.findOne({ email, provider: "credentails" });
     if (!user) {
       throw customError(
         400,
@@ -203,7 +202,6 @@ const resetPasswordEmailReqest = async (req, res, next) => {
     const resetLink = `${req.protocol}://${req.get(
       "host"
     )}/reset-password?reset=${resetToken}`;
-    console.log(resetLink);
 
     const emailOptions = {
       to: [user?.email],
@@ -248,6 +246,7 @@ const resetPassword = async (req, res, next) => {
     const user = await Users.findOne({
       passwordResetToken: resetToken,
       passwordResetTokenExpires: { $gt: Date.now() },
+      provider: "credentials",
     });
 
     if (!user) {

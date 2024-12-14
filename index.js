@@ -7,6 +7,7 @@ const cookieParser = require("cookie-parser");
 const userRouter = require("./routes/userRoutes");
 const productRouter = require("./routes/productRoutes");
 const cartRouter = require("./routes/cartRoutes");
+const configCloudinary = require("./config/cloudinaryConfig");
 const port = process.env.PORT || 8000;
 const app = express();
 app.use(cookieParser());
@@ -25,6 +26,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 connectDB();
+configCloudinary();
 
 app.get("/", async (req, res) => {
   res.send("Welcome to Luxeon server");

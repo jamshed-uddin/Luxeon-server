@@ -17,7 +17,7 @@ const userSchema = mongoose.Schema(
         addressLine: { type: String, default: "" },
       },
     ],
-
+    provider: { type: String, enum: ["credentials", "google"] },
     passwordResetToken: { type: String },
     passwordResetTokenExpires: { type: Date },
   },
