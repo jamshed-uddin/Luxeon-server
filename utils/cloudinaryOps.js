@@ -32,11 +32,12 @@ const uploadToCloud = async (file) => {
   });
 };
 
-const deleteFromCloud = async (publicId) => {
+const deleteFromCloud = async (publicIdArray) => {
   try {
-    const result = await cloudinary.uploader.destroy(publicId);
+    const result = await cloudinary.api.delete_resources(publicIdArray);
     return result;
   } catch (error) {
+    console.log("image delete error", error);
     throw Error(error);
   }
 };

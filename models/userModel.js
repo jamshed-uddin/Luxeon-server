@@ -4,7 +4,11 @@ const crypto = require("crypto");
 const userSchema = mongoose.Schema(
   {
     name: { type: String, required: [true, "Name is required"] },
-    email: { type: String, required: [true, "Email is required"] },
+    email: {
+      type: String,
+      required: [true, "Email is required"],
+      unique: [true, "The email address must be unique"],
+    },
     password: { type: String, required: [true, "Password is required"] },
     role: { type: String, default: "customer" },
     address: [
@@ -15,6 +19,7 @@ const userSchema = mongoose.Schema(
         city: { type: String, default: "" },
         zipCode: { type: String, default: "" },
         addressLine: { type: String, default: "" },
+        isDefault: { type: Boolean },
       },
     ],
     provider: { type: String, enum: ["credentials", "google"] },

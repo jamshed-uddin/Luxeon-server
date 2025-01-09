@@ -2,9 +2,7 @@ const jwt = require("jsonwebtoken");
 const secret = process.env.SECRET;
 
 const setCookie = (res, key, value) => {
-  const encryptedValue = jwt.sign({ [key]: value }, secret, {
-    expiresIn: "30d",
-  });
+  const encryptedValue = jwt.sign({ [key]: value }, secret);
 
   res.cookie(key, encryptedValue, {
     httpOnly: true,
@@ -28,7 +26,6 @@ const getCookie = (req, key) => {
 
   try {
     const decoded = jwt.verify(encryptedValue, secret);
-    // console.log("cartId", decoded[key]);
     return decoded[key];
   } catch (error) {
     return null;

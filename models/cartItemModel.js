@@ -17,5 +17,35 @@ const cartItemSchema = mongoose.Schema(
   { timestamps: true }
 );
 
+cartItemSchema.post("save", async function (doc, next) {
+  try {
+    if (this.cartId) {
+      await mongoose.model("Cart").findByIdAndUpdate(this.cartId, {
+        $addToSet: { items: this._id },
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+cartItemSchema.pre(
+  "deleteOne",
+  { document: false, query: true },
+  async function (next) {
+    try {
+      if (this.cartId) {
+        await mongoose.model("Cart").findByIdAndUpdate(this.cartId, {
+          $pull: { items: this._id },
+        });
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 module.exports =
   mongoose.models?.CartItem || mongoose.model("CartItem", cartItemSchema);

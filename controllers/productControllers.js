@@ -1,5 +1,5 @@
 const Products = require("../models/productModel");
-const { uploadToCloud } = require("../utils/cloudinaryOps");
+const { uploadToCloud, deleteFromCloud } = require("../utils/cloudinaryOps");
 const customError = require("../utils/customError");
 
 //@desc get all products with filters and pagination
@@ -120,7 +120,7 @@ const updateProduct = async (req, res, next) => {
       { new: true }
     );
 
-    res.status(200).send({ productId: updatedProduct._id });
+    res.status(200).send({ product: updatedProduct });
   } catch (error) {
     next(error);
   }
@@ -155,7 +155,7 @@ const deleteProduct = async (req, res, next) => {
 const uploadImage = async (req, res, next) => {
   try {
     const files = req.files;
-    console.log(files);
+
     if (!files.length || !files) {
       throw customError(400, "File is missing");
     }
@@ -164,10 +164,7 @@ const uploadImage = async (req, res, next) => {
 
     const uploadResult = await Promise.all(uploadPromisses);
 
-    console.log(uploadResult);
-    // console.log(req);
-
-    res.status(200).send({ message: "success", result: uploadResult });
+    res.status(200).send({ urls: uploadResult });
   } catch (error) {
     next(error);
   }
@@ -175,6 +172,12 @@ const uploadImage = async (req, res, next) => {
 
 const deleteImage = async (req, res, next) => {
   try {
+    const { publicIds } = req.body;
+    if (!publicIds?.length) {
+      throw customError(400, "PublicId is missing");
+    }
+    await deleteFromCloud(publicIds);
+    res.status(200).send({ message: "Image deleted" });
   } catch (error) {
     next(error);
   }
