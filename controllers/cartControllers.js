@@ -24,31 +24,28 @@ const createCart = async (res, userId) => {
   }
 };
 
-const getCart = async (userId, cartId, shouldPopulate = false) => {
-  if (!userId && !cartId) return;
+const getCart = async (userId, cartId) => {
+  if (!userId && !cartId) return null;
   try {
     let filter = {};
     if (userId) {
       filter.user = userId;
     }
 
-    if (cartId) {
+    if (cartId && !userId) {
       filter._id = cartId;
     }
-    console.log(filter);
+    console.log("filter", filter);
     let query = Cart.findOne(filter);
 
-    if (shouldPopulate) {
-      query = query.populate({
-        path: "items",
-        populate: {
-          path: "product",
-        },
-      });
-    }
-
     const cart = await query.lean();
-    return cart;
+    const cartItems = await CartItem.find({ cartId: cart._id }).populate(
+      "product"
+    );
+
+    if (!cart) return null;
+
+    return { ...cart, items: cartItems };
   } catch (error) {
     throw new Error(error);
   }
@@ -62,10 +59,8 @@ const getUserCart = async (req, res, next) => {
   try {
     const userId = req.query.userId;
     const cartId = getCookie(req, "cartId");
-    console.log("anonymous cart", cartId);
 
-    const cart = await getCart(userId, cartId, true);
-    console.log(cart);
+    const cart = await getCart(userId, cartId);
 
     const totalItems = cart?.items.reduce((acc, item) => {
       return acc + item.quantity;
@@ -103,7 +98,7 @@ const addToCart = async (req, res, next) => {
 
     let itemExists = await CartItem.findOne({
       product: productId,
-      _id: { $in: cart.items },
+      cartId: cart._id,
     });
 
     if (itemExists) {
@@ -115,11 +110,6 @@ const addToCart = async (req, res, next) => {
         product: productId,
         quantity: quantity || 1,
       });
-
-      // cart = await Cart.updateOne(
-      //   { _id: cart?._id },
-      //   { $push: { items: newCartItem._id } }
-      // );
     }
 
     res.status(200).send(cart);
@@ -135,7 +125,6 @@ const updateCartItem = async (req, res, next) => {
   try {
     const cartItemId = req.params.id;
     const { quantity } = req.body;
-
     if (
       quantity === "" ||
       quantity === undefined ||
@@ -144,18 +133,14 @@ const updateCartItem = async (req, res, next) => {
     ) {
       throw customError(400, "Valid quantity is required");
     }
-
     if (quantity === 0) {
       const cartItem = await CartItem.findOne({ _id: cartItemId });
 
       if (!cartItem) {
         throw customError(404, "Cart item not found");
       }
-
-      const cartId = cartItem.cartId;
-
       await CartItem.deleteOne({ _id: cartItemId });
-      await Cart.updateOne({ _id: cartId }, { $pull: { items: cartItemId } });
+
       return res.status(200).send({ message: "Cart item deleted" });
     }
 
@@ -180,21 +165,20 @@ const mergeAnonymousCart = async (req, res, next) => {
   console.log("the user id", userId);
 
   const localCartId = getCookie(req, "cartId");
-  console.log(localCartId);
+  console.log("merge local cartid", localCartId);
+  // console.log("cookie", req.cookies);
 
-  const localCart = localCartId
-    ? await Cart.findOne({ _id: localCartId }).populate("items")
-    : null;
+  const localCart = localCartId ? await getCart("", localCartId) : null;
 
   // there is no local cart. So there is nothing to merge.
   if (!localCart) {
-    return res.status(200).send("Cart merged successfully");
+    return res.status(200).send({ message: "No anonymous cart to merge" });
   }
 
-  let userCart = await Cart.findOne({ user: userId });
+  let userCart = await getCart(userId, "");
 
-  // const session = await mongoose.startSession();
-  // session.startTransaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
   console.log("localcart", localCart);
   console.log("usercart", userCart);
   try {
@@ -205,18 +189,21 @@ const mergeAnonymousCart = async (req, res, next) => {
       // looping through the local cart items
       localCart?.items.forEach((localCartItem) => {
         // and checking if the item is already in the user cart.
+        console.log("localcart item", localCartItem);
         const existingUserItem = userCart?.items.find(
           (userCartItem) =>
-            userCartItem.product.toString() === localCartItem.product.toString()
+            userCartItem.product?._id.toString() ===
+            localCartItem.product?._id.toString()
         );
 
+        console.log("local cart item exists in users cart", existingUserItem);
         // if the item is already in the user cart then we just add the local cart item quantity to the user cart item quantity.
         if (existingUserItem) {
           bulkOps.push({
             updateOne: {
               filter: {
                 cartId: userCart._id,
-                product: existingUserItem?.product,
+                product: existingUserItem?.product._id,
               },
               update: {
                 $inc: { quantity: localCartItem?.quantity },
@@ -229,7 +216,7 @@ const mergeAnonymousCart = async (req, res, next) => {
             deleteOne: {
               filter: {
                 cartId: localCartId,
-                product: existingUserItem?.product,
+                product: existingUserItem?.product._id,
               },
             },
           });
@@ -249,25 +236,25 @@ const mergeAnonymousCart = async (req, res, next) => {
       });
 
       // todo: do the bulkwrite here
-      // await CartItem.bulkWrite(bulkOps, { session });
-      console.log(bulkOps);
+      await CartItem.bulkWrite(bulkOps, { session });
+      console.log("bulk operations", bulkOps);
 
       // after loop is complete items either merged or updated. Now we can delete the local cart
       await Cart.deleteOne({ _id: localCartId }, { session });
-      // deleteCookie(res, "cartId");
+      deleteCookie(res, "cartId");
     } else {
       // if there is no user cart, then just update the cart with the user id
       await Cart.updateOne({ _id: localCartId }, { user: userId }, { session });
-      // deleteCookie(res, "cartId");
+      deleteCookie(res, "cartId");
     }
 
-    // await session.commitTransaction();
-    // session.endSession();
+    await session.commitTransaction();
+    session.endSession();
 
-    res.status(200).send("Cart merged successfully");
+    res.status(200).send({ message: "Cart merged successfully" });
   } catch (error) {
-    // await session.abortTransaction();
-    // session.endSession();
+    await session.abortTransaction();
+    session.endSession();
     next(error);
   }
 };
