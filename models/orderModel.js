@@ -17,8 +17,8 @@ const orderSchema = mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["shipped", "delivered", "cancelled"],
-      default: "shipped",
+      enum: ["processing", "delivered", "cancelled"],
+      default: "processing",
     },
     totalPrice: { type: Number, required: [true, "Total price is required"] },
     items: [
@@ -30,21 +30,5 @@ const orderSchema = mongoose.Schema(
   },
   { timestamps: true }
 );
-
-orderSchema.pre("findOneAndDelete", async function (next) {
-  try {
-    const order = await this.model.findOne(this.getFilter());
-
-    if (order && order.items && order.items.length > 0) {
-      await mongoose
-        .model("OrderItem")
-        .deleteMany({ _id: { $in: order.items } });
-    }
-
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
 
 module.exports = mongoose.models?.Order || mongoose.model("Order", orderSchema);

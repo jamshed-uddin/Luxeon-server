@@ -162,12 +162,7 @@ const updateCartItem = async (req, res, next) => {
 
 const mergeAnonymousCart = async (req, res, next) => {
   const { userId } = req.body;
-  console.log("the user id", userId);
-
   const localCartId = getCookie(req, "cartId");
-  console.log("merge local cartid", localCartId);
-  // console.log("cookie", req.cookies);
-
   const localCart = localCartId ? await getCart("", localCartId) : null;
 
   // there is no local cart. So there is nothing to merge.
@@ -175,87 +170,101 @@ const mergeAnonymousCart = async (req, res, next) => {
     return res.status(200).send({ message: "No anonymous cart to merge" });
   }
 
-  let userCart = await getCart(userId, "");
+  const max_retries = 3;
+  let attempt = 0;
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  console.log("localcart", localCart);
-  console.log("usercart", userCart);
-  try {
-    // at this point we have both local cart and user cart
-    if (userCart) {
-      const bulkOps = [];
+  while (attempt < max_retries) {
+    // starting mongoose transaction
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-      // looping through the local cart items
-      localCart?.items.forEach((localCartItem) => {
-        // and checking if the item is already in the user cart.
-        console.log("localcart item", localCartItem);
-        const existingUserItem = userCart?.items.find(
-          (userCartItem) =>
-            userCartItem.product?._id.toString() ===
-            localCartItem.product?._id.toString()
+    try {
+      let userCart = await getCart(userId, "");
+
+      // at this point we have both local cart and user cart
+      if (userCart) {
+        const bulkOps = [];
+
+        // looping through the local cart items
+        localCart?.items.forEach((localCartItem) => {
+          // and checking if the item is already in the user cart.
+          const existingUserItem = userCart?.items.find(
+            (userCartItem) =>
+              userCartItem.product?._id.toString() ===
+              localCartItem.product?._id.toString()
+          );
+
+          // if the item is already in the user cart then we just add the local cart item quantity to the user cart item quantity.
+          if (existingUserItem) {
+            bulkOps.push({
+              updateOne: {
+                filter: {
+                  cartId: userCart._id,
+                  product: existingUserItem?.product._id,
+                },
+                update: {
+                  $inc: { quantity: localCartItem?.quantity },
+                },
+              },
+            });
+
+            // then we delete the item of the local cart as we update the quantity of the matched usercart item.
+            bulkOps.push({
+              deleteOne: {
+                filter: {
+                  cartId: localCartId,
+                  product: existingUserItem?.product._id,
+                },
+              },
+            });
+          } else {
+            // if the item is not in the user cart then we just update the cart id of the local cart item to the user cart id
+            bulkOps.push({
+              updateOne: {
+                filter: {
+                  _id: localCartItem._id,
+                },
+                update: {
+                  cartId: userCart._id,
+                },
+              },
+            });
+          }
+        });
+
+        // todo: do the bulkwrite here
+        await CartItem.bulkWrite(bulkOps, { session });
+
+        // after loop is complete items either merged or updated. Now we can delete the local cart
+        await Cart.deleteOne({ _id: localCartId }, { session });
+        deleteCookie(res, "cartId");
+      } else {
+        // if there is no user cart, then just update the cart with the user id
+        await Cart.updateOne(
+          { _id: localCartId },
+          { user: userId },
+          { session }
         );
+        deleteCookie(res, "cartId");
+      }
 
-        console.log("local cart item exists in users cart", existingUserItem);
-        // if the item is already in the user cart then we just add the local cart item quantity to the user cart item quantity.
-        if (existingUserItem) {
-          bulkOps.push({
-            updateOne: {
-              filter: {
-                cartId: userCart._id,
-                product: existingUserItem?.product._id,
-              },
-              update: {
-                $inc: { quantity: localCartItem?.quantity },
-              },
-            },
-          });
+      // ending and commiting transaction
+      await session.commitTransaction();
+      session.endSession();
 
-          // then we delete the item of the local cart as we update the quantity of the matched usercart item.
-          bulkOps.push({
-            deleteOne: {
-              filter: {
-                cartId: localCartId,
-                product: existingUserItem?.product._id,
-              },
-            },
-          });
-        } else {
-          // if the item is not in the user cart then we just update the cart id of the local cart item to the user cart id
-          bulkOps.push({
-            updateOne: {
-              filter: {
-                _id: localCartItem._id,
-              },
-              update: {
-                cartId: userCart._id,
-              },
-            },
-          });
-        }
-      });
-
-      // todo: do the bulkwrite here
-      await CartItem.bulkWrite(bulkOps, { session });
-      console.log("bulk operations", bulkOps);
-
-      // after loop is complete items either merged or updated. Now we can delete the local cart
-      await Cart.deleteOne({ _id: localCartId }, { session });
-      deleteCookie(res, "cartId");
-    } else {
-      // if there is no user cart, then just update the cart with the user id
-      await Cart.updateOne({ _id: localCartId }, { user: userId }, { session });
-      deleteCookie(res, "cartId");
+      // along with response this exits the loop
+      return res.status(200).send({ message: "Cart merged successfully" });
+    } catch (error) {
+      // increasing the attempt
+      attempt += 1;
+      // aborting and ending transaction in case of failure
+      await session.abortTransaction();
+      session.endSession();
+      // exits the loop
+      if (attempt >= max_retries) {
+        return next(error);
+      }
     }
-
-    await session.commitTransaction();
-    session.endSession();
-
-    res.status(200).send({ message: "Cart merged successfully" });
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    next(error);
   }
 };
 

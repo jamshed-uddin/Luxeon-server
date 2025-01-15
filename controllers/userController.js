@@ -199,9 +199,7 @@ const resetPasswordEmailReqest = async (req, res, next) => {
 
     const resetToken = await user.generatePasswordResetToken();
 
-    const resetLink = `${req.protocol}://${req.get(
-      "host"
-    )}/reset-password?reset=${resetToken}`;
+    const resetLink = `${req.headers.origin}/reset-password?reset=${resetToken}`;
 
     const emailOptions = {
       to: [user?.email],
