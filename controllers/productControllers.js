@@ -12,7 +12,7 @@ const getAllProducts = async (req, res, next) => {
     const page = +query.page || 1;
     const limit = +query.limit || 15;
     const category = query.category || "";
-    const stock = query.stock || false;
+    const stock = query.inStock || false;
 
     let filter = {};
 
@@ -25,7 +25,7 @@ const getAllProducts = async (req, res, next) => {
     }
 
     if (stock) {
-      filter.stock = { $gte: 0 };
+      filter.stock = { $gt: 0 };
     }
 
     if (query.minPrice) {
@@ -40,8 +40,6 @@ const getAllProducts = async (req, res, next) => {
       sortBy[query?.sort] =
         query?.order && query?.order.toLowerCase() === "desc" ? -1 : 1;
     }
-
-    // console.log(sortBy);
 
     const allProducts = await Products.find(filter)
       .skip((page - 1) * limit)

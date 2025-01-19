@@ -11,8 +11,6 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const createOrder = async (req, res, next) => {
   const webhookEndpointSecret = process.env.STRIPE_WEBHOOK_ENDPOINT_SECRET;
   const sig = req.headers["stripe-signature"];
-  console.log("req body", req.body);
-  console.log("signature", sig, webhookEndpointSecret);
 
   const event = stripe.webhooks.constructEvent(
     req.body,
@@ -22,12 +20,14 @@ const createOrder = async (req, res, next) => {
   // console.log("webhook reveived", event);
   const data = JSON.parse(event?.data?.object?.metadata.data);
 
-  // console.log(data);
+  console.log("meta data", data);
 
   if (event.type === "payment_intent.succeeded") {
+    // Always respond with 200 to acknowledge receipt
+    res.status(200).send("Success");
     console.log("Payment Intent succeeded:", event.data.object);
 
-    const MAX_RETIES = 3;
+    const MAX_RETIES = 4;
     let attempt = 0;
 
     while (attempt < MAX_RETIES) {
@@ -46,7 +46,7 @@ const createOrder = async (req, res, next) => {
 
         // process data to filter out the stocked out items
 
-        const stockedItems = cartItems.filter(
+        const stockedItems = cartItems?.filter(
           (item) => item.product.stock >= item.quantity
         );
 
@@ -59,6 +59,7 @@ const createOrder = async (req, res, next) => {
         // create new object of order then save it to database.
         const orderData = {
           user: {
+            userId: cart?.user,
             name: data?.userName,
             email: data?.userEmail,
           },
@@ -66,12 +67,13 @@ const createOrder = async (req, res, next) => {
           totalPrice: totalPrice,
         };
 
-        const newOrder = await Orders.create(orderData, { session });
+        const newOrder = await Orders.create([orderData], { session });
+        console.log("created new order", newOrder);
 
         // save order items to db
         const orderItems = stockedItems.map((item) => {
           return {
-            orderId: newOrder._id,
+            orderId: newOrder?.at(0)._id,
             product: item.product._id,
             price: item.product.price,
             quantity: item.quantity,
@@ -79,17 +81,19 @@ const createOrder = async (req, res, next) => {
           };
         });
 
+        console.log("order items", orderItems);
+
         await OrderItems.insertMany(orderItems, { session });
 
         // create a payment object and save it to database
 
         const newPaymentData = {
-          orderId: newOrder._id,
+          orderId: newOrder?.at(0)._id,
           user: cart.user,
           amount: totalPrice,
           transactionId: event.data.object.id,
         };
-        await Payments.create(newPaymentData, { session });
+        await Payments.create([newPaymentData], { session });
 
         // delete the cart and cart items from database
         await Cart.findByIdAndDelete({ _id: data.cartId }, { session });
@@ -115,6 +119,7 @@ const createOrder = async (req, res, next) => {
         await session.commitTransaction();
         return;
       } catch (error) {
+        console.log(error);
         attempt += 1;
         // aborting session in case of failure
         await session.abortTransaction();
@@ -127,9 +132,52 @@ const createOrder = async (req, res, next) => {
       }
     }
   }
+};
 
-  // Always respond with 200 to acknowledge receipt
-  res.status(200).send("Success");
+const getOrders = async (req, res, next) => {
+  try {
+    const userId = req.query.userId;
+    if (!userId) {
+      throw customError(400, "User id is required");
+    }
+    const allOrders = await Orders.find({ "user.userId": userId });
+    console.log(userId);
+    console.log(allOrders);
+    res.status(200).send(allOrders);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getSingleOrder = async (req, res, next) => {
+  try {
+    const id = req.params.orderId;
+
+    if (!id) {
+      throw customError(400, "Order id is required");
+    }
+
+    const order = await Orders.findOne({ _id: id }).lean();
+
+    if (!order) {
+      throw customError(404, "Order not found");
+    }
+    const orderItems = await OrderItems.find({ orderId: id }).populate(
+      "product"
+    );
+    const paymentDetails = await Payments.findOne({ orderId: id });
+    console.log(orderItems);
+
+    const response = {
+      ...order,
+      items: orderItems,
+      paymentDetails,
+    };
+
+    res.status(200).send(response);
+  } catch (error) {
+    next(error);
+  }
 };
 
 const updateOrder = async (req, res, next) => {
@@ -142,4 +190,6 @@ const updateOrder = async (req, res, next) => {
 module.exports = {
   createOrder,
   updateOrder,
+  getOrders,
+  getSingleOrder,
 };

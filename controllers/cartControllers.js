@@ -35,11 +35,11 @@ const getCart = async (userId, cartId) => {
     if (cartId && !userId) {
       filter._id = cartId;
     }
-    console.log("filter", filter);
+
     let query = Cart.findOne(filter);
 
     const cart = await query.lean();
-    const cartItems = await CartItem.find({ cartId: cart._id }).populate(
+    const cartItems = await CartItem.find({ cartId: cart?._id }).populate(
       "product"
     );
 
@@ -61,6 +61,9 @@ const getUserCart = async (req, res, next) => {
     const cartId = getCookie(req, "cartId");
 
     const cart = await getCart(userId, cartId);
+    if (!cart) {
+      return res.status(200).send({ _id: null, user: null, items: [] });
+    }
 
     const totalItems = cart?.items.reduce((acc, item) => {
       return acc + item.quantity;

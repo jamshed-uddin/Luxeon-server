@@ -1,8 +1,13 @@
 const express = require("express");
-const { createOrder } = require("../controllers/orderController");
+const {
+  createOrder,
+  getOrders,
+  getSingleOrder,
+} = require("../controllers/orderController");
 const router = express.Router();
-const bodyParser = require("body-parser");
 
 router.post("/create/webhook", createOrder);
+router.get("/", getOrders);
+router.get("/:orderId", getSingleOrder);
 
 module.exports = router;
