@@ -3,7 +3,7 @@ const errorHandler = (err, req, res, next) => {
   const message = err.message;
   //todo: delete stack printer
   const stack = err.stack;
-  console.log(err);
+
   res.status(statusCode).send({ message, stack });
 };
 

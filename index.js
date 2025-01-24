@@ -10,6 +10,7 @@ const productRouter = require("./routes/productRoutes");
 const cartRouter = require("./routes/cartRoutes");
 const paymentRouter = require("./routes/paymentRoutes");
 const orderRouter = require("./routes/orderRoutes");
+const dashboardRoute = require("./routes/dashboardRoutes");
 const configCloudinary = require("./config/cloudinaryConfig");
 const port = process.env.PORT || 8000;
 const app = express();
@@ -42,6 +43,7 @@ app.use("/api/products", productRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/payments", paymentRouter);
 app.use("/api/orders", orderRouter);
+app.use("/api/dashboard", dashboardRoute);
 
 app.use(errorHandler);
 app.use(notFound);

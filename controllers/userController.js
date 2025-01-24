@@ -209,9 +209,7 @@ const resetPasswordEmailReqest = async (req, res, next) => {
 
     try {
       const res = await sendEmail(emailOptions);
-      console.log("mail response", res);
     } catch (error) {
-      console.log("mailerror", error);
       throw customError(
         400,
         "Failed to send instructions. Wait before trying again."

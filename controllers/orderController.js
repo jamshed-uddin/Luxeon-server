@@ -17,15 +17,13 @@ const createOrder = async (req, res, next) => {
     sig,
     webhookEndpointSecret
   );
-  // console.log("webhook reveived", event);
-  const data = JSON.parse(event?.data?.object?.metadata.data);
 
-  console.log("meta data", data);
+  const data = JSON.parse(event?.data?.object?.metadata.data);
 
   if (event.type === "payment_intent.succeeded") {
     // Always respond with 200 to acknowledge receipt
     res.status(200).send("Success");
-    console.log("Payment Intent succeeded:", event.data.object);
+    // console.log("Payment Intent succeeded:", event.data.object);
 
     const MAX_RETIES = 4;
     let attempt = 0;
@@ -68,7 +66,6 @@ const createOrder = async (req, res, next) => {
         };
 
         const newOrder = await Orders.create([orderData], { session });
-        console.log("created new order", newOrder);
 
         // save order items to db
         const orderItems = stockedItems.map((item) => {
@@ -80,8 +77,6 @@ const createOrder = async (req, res, next) => {
             subtotal: item.product.price * item.quantity,
           };
         });
-
-        console.log("order items", orderItems);
 
         await OrderItems.insertMany(orderItems, { session });
 
@@ -109,17 +104,13 @@ const createOrder = async (req, res, next) => {
           };
         });
         await Products.bulkWrite(bulkOps, { session });
-        // console.log("new order", newOrder);
-        // console.log("new order items", orderItems);
-        // console.log("new payment data", newPaymentData);
-        // console.log("the stripe event", event);
+
         // send a order placing email to the user in invoice format
 
         // commiting session
         await session.commitTransaction();
         return;
-      } catch (error) {
-        console.log(error);
+      } catch {
         attempt += 1;
         // aborting session in case of failure
         await session.abortTransaction();
@@ -141,8 +132,7 @@ const getOrders = async (req, res, next) => {
       throw customError(400, "User id is required");
     }
     const allOrders = await Orders.find({ "user.userId": userId });
-    console.log(userId);
-    console.log(allOrders);
+
     res.status(200).send(allOrders);
   } catch (error) {
     next(error);
@@ -166,7 +156,6 @@ const getSingleOrder = async (req, res, next) => {
       "product"
     );
     const paymentDetails = await Payments.findOne({ orderId: id });
-    console.log(orderItems);
 
     const response = {
       ...order,

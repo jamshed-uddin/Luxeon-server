@@ -22,7 +22,6 @@ const uploadToCloud = async (file) => {
       },
       (err, result) => {
         if (err) {
-          console.log(err);
           reject(err);
         } else {
           resolve({ url: result?.secure_url, publicId: result?.public_id });
@@ -37,7 +36,6 @@ const deleteFromCloud = async (publicIdArray) => {
     const result = await cloudinary.api.delete_resources(publicIdArray);
     return result;
   } catch (error) {
-    console.log("image delete error", error);
     throw Error(error);
   }
 };
