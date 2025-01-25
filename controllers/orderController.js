@@ -125,15 +125,34 @@ const createOrder = async (req, res, next) => {
   }
 };
 
-const getOrders = async (req, res, next) => {
+const getOrders = async (query) => {
+  try {
+    return await Orders.find(query);
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getUsersOrders = async (req, res, next) => {
   try {
     const userId = req.query.userId;
     if (!userId) {
       throw customError(400, "User id is required");
     }
-    const allOrders = await Orders.find({ "user.userId": userId });
+
+    const allOrders = await getOrders({ "user.userId": userId });
 
     res.status(200).send(allOrders);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAllOrders = async (req, res, next) => {
+  try {
+    const orders = await getOrders({});
+
+    res.status(200).send(orders);
   } catch (error) {
     next(error);
   }
@@ -179,6 +198,7 @@ const updateOrder = async (req, res, next) => {
 module.exports = {
   createOrder,
   updateOrder,
-  getOrders,
+  getUsersOrders,
+  getAllOrders,
   getSingleOrder,
 };

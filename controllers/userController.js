@@ -157,13 +157,6 @@ const logoutUser = async (req, res, next) => {
   }
 };
 
-const deleteUser = async (req, res, next) => {
-  try {
-  } catch (error) {
-    next(error);
-  }
-};
-
 //@desc generate auth token
 //route POST/api/users/generateAuthToken
 //access public
@@ -260,6 +253,57 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+//@desc change password
+//route PATCH/api/users/changePassword
+//access private
+const changePassword = async (req, res, next) => {
+  try {
+    const { userEmail, currentPassword, newPassword } = req.body;
+
+    if (!userEmail || !currentPassword || !newPassword) {
+      throw customError(400, "Required field is missing");
+    }
+
+    const user = await Users.findOne({ email: userEmail });
+
+    if (user && (await user.matchPassword(currentPassword))) {
+      user.password = newPassword;
+      await user.save();
+    } else {
+      throw customError(400, "Something went wrong.");
+    }
+
+    res.status(200).send({ message: "Password changed." });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//@desc delete user
+//route DELETE/api/users/
+//access private
+const deleteUser = async (req, res, next) => {
+  try {
+    const { userEmail, password } = req.body;
+
+    if (!userEmail || !password) {
+      throw customError(400, "Required field is missing.");
+    }
+
+    const user = await Users.findOne({ email: userEmail });
+
+    if (user && (await user.matchPassword(password))) {
+      await Users.deleteOne({ email: userEmail });
+    } else {
+      throw customError(400, "Something went wrong");
+    }
+
+    res.status(200).send({ message: "User deleted." });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   loginUser,
   getAllUsers,
@@ -271,4 +315,5 @@ module.exports = {
   generateJwtToken,
   resetPasswordEmailReqest,
   resetPassword,
+  changePassword,
 };
