@@ -19,6 +19,7 @@ const userSchema = mongoose.Schema(
         city: { type: String, default: "" },
         zipCode: { type: String, default: "" },
         addressLine: { type: String, default: "" },
+        street: { type: String, default: "" },
         isDefault: { type: Boolean },
       },
     ],

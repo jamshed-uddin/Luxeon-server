@@ -9,8 +9,8 @@ const {
   loginUser,
   generateJwtToken,
   resetPassword,
-  resetPasswordEmailReqest,
   changePassword,
+  resetPasswordEmailRequest,
 } = require("../controllers/userController");
 const router = express.Router();
 
@@ -18,13 +18,12 @@ router.get("/", getAllUsers);
 router.get("/:email", getSingleUser);
 router.post("/login", loginUser);
 router.post("/", registerUser);
-router.delete("/", deleteUser);
 router.patch("/:id", updateUser);
 router.delete("/:id", deleteUser);
 router.post("/logout", logoutUser);
 router.post("/generateAuthToken", generateJwtToken);
-router.post("/resetPasswordEmailReqest", resetPasswordEmailReqest);
+router.post("/resetPasswordEmailRequest", resetPasswordEmailRequest);
 router.put("/resetPassword", resetPassword);
-router.patch("/changePassword", changePassword);
+router.put("/changePassword", changePassword);
 
 module.exports = router;

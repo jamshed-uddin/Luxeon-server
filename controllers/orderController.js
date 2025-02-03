@@ -140,9 +140,9 @@ const getUsersOrders = async (req, res, next) => {
       throw customError(400, "User id is required");
     }
 
-    const allOrders = await getOrders({ "user.userId": userId });
-
-    res.status(200).send(allOrders);
+    const usersOrder = await getOrders({ "user.userId": userId });
+    console.log(usersOrder);
+    res.status(200).send(usersOrder);
   } catch (error) {
     next(error);
   }

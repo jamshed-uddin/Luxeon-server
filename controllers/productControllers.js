@@ -43,6 +43,7 @@ const getAllProducts = async (req, res, next) => {
 
     const allProducts = await Products.find(filter)
       .skip((page - 1) * limit)
+      .limit(limit)
       .sort(sortBy)
       .exec();
 

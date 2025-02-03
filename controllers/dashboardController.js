@@ -83,16 +83,18 @@ const getTopMetrics = async (req, res, next) => {
     ];
 
     // group by month to get monthly sales and order count
-    const montlyData = await Orders.aggregate(aggStages("month", currentYear));
+    const monthlyData = await Orders.aggregate(aggStages("month", currentYear));
     // group by year to get yearly sales and order count
     const yearlyData = await Orders.aggregate(aggStages("year"));
     // get total product count and product which stock is less than or equal 5
     const products = await Products.aggregate(stagesForProductData);
 
+    const revenueAndOrder = { totalRevenue: 0, totalOrder: 0 };
+
     const response = {
       salesAndOrders: {
-        thisMonth: { ...montlyData[0] },
-        thisYear: { ...yearlyData[0] },
+        thisMonth: { ...revenueAndOrder, ...monthlyData[0] },
+        thisYear: { ...revenueAndOrder, ...yearlyData[0] },
       },
       productsData: { ...products[0] },
     };

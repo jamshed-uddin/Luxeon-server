@@ -30,11 +30,10 @@ const passwordResetTemplate = (resetLink) => {
       }
       .button {
         display: inline-block;
-        
         padding: 10px 20px;
         background-color: #000;
         color: #fff;
-        text-decoration: none;
+        text-decoration: none!important;
         font-weight: bold;
         border-radius: 5px;
       }
@@ -59,7 +58,7 @@ const passwordResetTemplate = (resetLink) => {
           For security reasons, this link is valid for 15 minutes. If you didn't
           request a password reset, ignore this message.
         </p>
-        <p>Luxeon </p>
+        <p class="footer">Luxeon </p>
      
       </div>
     </div>

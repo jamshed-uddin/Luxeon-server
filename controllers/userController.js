@@ -16,13 +16,14 @@ const loginUser = async (req, res, next) => {
       throw customError(401, "Email required");
     }
 
-    const user = await Users.findOne({ email, provider: "credentails" });
+    const user = await Users.findOne({ email, provider: "credentials" });
 
     if (user && (await user.matchPassword(password))) {
       const { password: passcode, ...userData } = user._doc;
+      console.log(userData);
       res.status(200).send(userData);
     } else {
-      throw customError(400, "Invalid credentails");
+      throw customError(400, "Invalid credentials");
     }
 
     // generateToken(res, user._id);
@@ -123,19 +124,22 @@ const getSingleUser = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const id = req.params.id;
-    const updatedInfo = req.body;
+    const { address } = req.body;
+
+    console.log(address);
+
     const user = await Users.findOne({ _id: id });
     if (!user) {
       throw customError(404, "User not found");
     }
 
-    const updatedUser = await Users.findByIdAndUpdatefindOneAndUpdate(
+    const updatedUser = await Users.findByIdAndUpdate(
       { _id: id },
-      updatedInfo,
+      { address },
       { new: true }
     );
-
-    res.status(200).send(updatedUser);
+    console.log(updatedUser?.address);
+    res.status(200).send({ address: updatedUser?.address });
   } catch (error) {
     next(error);
   }
@@ -177,12 +181,13 @@ const generateJwtToken = async (req, res, next) => {
 };
 
 //@desc request for password reset email
-//route POST/api/users/resetPasswordEmailReqest
+//route POST/api/users/resetPasswordEmailRequest
 //access public
-const resetPasswordEmailReqest = async (req, res, next) => {
+const resetPasswordEmailRequest = async (req, res, next) => {
   const { email } = req.body;
   try {
-    const user = await Users.findOne({ email, provider: "credentails" });
+    const user = await Users.findOne({ email, provider: "credentials" });
+    console.log(user);
     if (!user) {
       throw customError(
         400,
@@ -202,7 +207,9 @@ const resetPasswordEmailReqest = async (req, res, next) => {
 
     try {
       const res = await sendEmail(emailOptions);
+      console.log(res);
     } catch (error) {
+      console.log(error);
       throw customError(
         400,
         "Failed to send instructions. Wait before trying again."
@@ -210,6 +217,7 @@ const resetPasswordEmailReqest = async (req, res, next) => {
     }
     res.status(200).send({ message: "Email sent" });
   } catch (error) {
+    console.log(error);
     next(error);
   }
 };
@@ -258,8 +266,9 @@ const resetPassword = async (req, res, next) => {
 //access private
 const changePassword = async (req, res, next) => {
   try {
+    console.log("change triggered");
     const { userEmail, currentPassword, newPassword } = req.body;
-
+    console.log("change pass req body", req.body);
     if (!userEmail || !currentPassword || !newPassword) {
       throw customError(400, "Required field is missing");
     }
@@ -275,6 +284,7 @@ const changePassword = async (req, res, next) => {
 
     res.status(200).send({ message: "Password changed." });
   } catch (error) {
+    console.log(error);
     next(error);
   }
 };
@@ -284,19 +294,22 @@ const changePassword = async (req, res, next) => {
 //access private
 const deleteUser = async (req, res, next) => {
   try {
-    const { userEmail, password } = req.body;
+    const userId = req.params.id;
+    const { password } = req.body;
 
-    if (!userEmail || !password) {
+    if (!userId || !password) {
       throw customError(400, "Required field is missing.");
     }
 
-    const user = await Users.findOne({ email: userEmail });
+    const user = await Users.findOne({ _id: userId });
 
-    if (user && (await user.matchPassword(password))) {
-      await Users.deleteOne({ email: userEmail });
-    } else {
-      throw customError(400, "Something went wrong");
-    }
+    console.log(user);
+
+    // if (user && (await user.matchPassword(password))) {
+    //   await Users.deleteOne({ email: userEmail });
+    // } else {
+    //   throw customError(400, "Something went wrong");
+    // }
 
     res.status(200).send({ message: "User deleted." });
   } catch (error) {
@@ -313,7 +326,7 @@ module.exports = {
   deleteUser,
   logoutUser,
   generateJwtToken,
-  resetPasswordEmailReqest,
+  resetPasswordEmailRequest,
   resetPassword,
   changePassword,
 };
