@@ -22,6 +22,7 @@ app.use(
     credentials: true,
   })
 );
+app.options("*", cors(corsOptions));
 app.use("/api/orders/create/webhook", bodyParser.raw({ type: "*/*" }));
 // app.use(bodyParser.json());
 app.use(express.json());
