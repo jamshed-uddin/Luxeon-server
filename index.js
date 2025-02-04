@@ -17,11 +17,10 @@ const app = express();
 app.use(cookieParser());
 const corsOptions = {
   origin: ["https://luxeon.vercel.app/", "http://localhost:3000"],
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
 };
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+// app.options("*", cors(corsOptions));
 
 app.use("/api/orders/create/webhook", bodyParser.raw({ type: "*/*" }));
 // app.use(bodyParser.json());
