@@ -18,7 +18,7 @@ router.get("/", getAllUsers);
 router.get("/:email", getSingleUser);
 router.post("/login", loginUser);
 router.post("/", registerUser);
-router.patch("/:id", updateUser);
+router.put("/:id", updateUser);
 router.delete("/:id", deleteUser);
 router.post("/logout", logoutUser);
 router.post("/generateAuthToken", generateJwtToken);

@@ -262,7 +262,7 @@ const resetPassword = async (req, res, next) => {
 };
 
 //@desc change password
-//route PATCH/api/users/changePassword
+//route PUT/api/users/changePassword
 //access private
 const changePassword = async (req, res, next) => {
   try {

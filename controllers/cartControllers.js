@@ -121,8 +121,8 @@ const addToCart = async (req, res, next) => {
   }
 };
 
-//@desc get cart of a user populated with cartItem.
-//route PATCH/api/cart/:id
+//@desc update cart item quantity
+//route PUT/api/cart/:id
 //access public
 const updateCartItem = async (req, res, next) => {
   try {
