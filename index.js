@@ -16,7 +16,7 @@ const port = process.env.PORT || 8000;
 const app = express();
 app.use(cookieParser());
 const corsOptions = {
-  origin: ["https://luxeon.vercel.app/", "http://localhost:3000"],
+  origin: ["https://luxeon.vercel.app", "http://localhost:3000"],
   credentials: true,
 };
 app.use(cors(corsOptions));
