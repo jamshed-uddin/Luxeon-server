@@ -17,7 +17,7 @@ const app = express();
 app.use(cookieParser());
 const corsOptions = {
   origin: ["https://luxeon.vercel.app", "http://localhost:3000"],
-
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
 };
 app.use(cors(corsOptions));
