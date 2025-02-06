@@ -6,7 +6,7 @@ const createPaymentIntent = async (req, res, next) => {
   try {
     const { amount, data } = req.body;
     if (!amount) {
-      throw customError(400, "Amount is required ");
+      throw customError(400, "Amount is required");
     }
 
     if (!data.cartId) {
